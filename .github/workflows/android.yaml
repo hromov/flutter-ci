@@ -1,0 +1,40 @@
+name: Integration Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  android-e2e:
+    timeout-minutes: 90
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        api-level:
+          - 33
+        target:
+          - google_apis
+        arch:
+          - x86_64
+      fail-fast: true
+    steps:
+      - uses: actions/checkout@v3
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub cache clean -f
+      - run: flutter clean
+      - run: flutter pub get
+      - run: flutter doctor -v
+
+      - name: Run integration tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          force-avd-creation: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          emulator-boot-timeout: 300
+          profile: Nexus 6
+          script: flutter drive --driver=test_driver/integration_test.dart --target=integration_test/app_tests.dart --flavor=dev --no-enable-impeller
